@@ -1,53 +1,18 @@
 # ms-barriodigital-requests
 
-Microservicio principal para la gestión del ciclo de vida de los trámites de la plataforma **BarrioDigital**.
-
-## Descripción
-
-Este microservicio administra las solicitudes o trámites creados por los vecinos y funcionarios.
-
-Es responsable del estado transaccional principal de cada trámite y actúa como productor de eventos y comandos asíncronos relacionados con su procesamiento.
+Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 
 ## Responsabilidades
 
 - Crear trámites.
-- Consultar trámites.
-- Listar y filtrar trámites.
-- Consultar trámites pertenecientes al usuario autenticado.
-- Gestionar cambios de estado.
-- Validar reglas de transición.
-- Consultar información de tipos de trámite.
-- Validar cupos.
-- Coordinar asignaciones con cuadrillas.
-- Persistir trámites en MySQL.
-- Publicar comandos asíncronos en RabbitMQ.
-- Publicar eventos de dominio en Kafka.
-
-## Estados del trámite
-
-```text
-INGRESADO
-   ↓
-ADMITIDO
-   ↓
-EN_GESTION
-   ↓
-EN_TERRENO
-   ↓
-RESUELTO
-```
-
-Estado alternativo:
-
-```text
-RECHAZADO
-```
-
-Regla inicial:
-
-```text
-Un trámite no puede pasar a EN_TERRENO si previamente no fue ADMITIDO.
-```
+- Listar trámites.
+- Consultar un trámite.
+- Consultar trámites del usuario autenticado.
+- Gestionar estados.
+- Validar tipos y cupos mediante Catalog.
+- Coordinar asignaciones mediante Crews.
+- Publicar tareas en RabbitMQ.
+- Publicar eventos en Kafka.
 
 ## Stack tecnológico
 
@@ -59,14 +24,13 @@ Un trámite no puede pasar a EN_TERRENO si previamente no fue ADMITIDO.
 - Maven
 - MySQL
 - RabbitMQ
-- Apache Kafka
+- Kafka
 - Spring Security
-- Resilience4j
 - Eureka Client
 - Spring Boot Actuator
 - Docker
 
-## Puerto local
+## Puerto
 
 ```text
 8081
@@ -78,252 +42,114 @@ Un trámite no puede pasar a EN_TERRENO si previamente no fue ADMITIDO.
 barriodigital_requests_db
 ```
 
-Se utiliza el patrón:
+Patrón:
 
 ```text
 Database per Service
 ```
 
-Este servicio es el único propietario de `barriodigital_requests_db`.
-
-Otros microservicios no deben acceder directamente a sus tablas.
-
-## API inicial
-
-Base path:
+## Estados
 
 ```text
-/api/v1/requests
+INGRESADO
+ADMITIDO
+EN_GESTION
+EN_TERRENO
+RESUELTO
+RECHAZADO
 ```
 
-Endpoints propuestos:
+## API
 
 ```http
-POST /api/v1/requests
-GET /api/v1/requests
-GET /api/v1/requests/{requestId}
-GET /api/v1/requests/me
-PATCH /api/v1/requests/{requestId}/status
-GET /api/v1/requests/{requestId}/history
+POST  /api/v1/requests
+GET   /api/v1/requests
+GET   /api/v1/requests/me
+GET   /api/v1/requests/{id}
+PATCH /api/v1/requests/{id}/status
 ```
 
-Ejemplo creación:
-
-```json
-{
-  "procedureTypeId": 12,
-  "description": "Luminaria pública sin funcionamiento",
-  "address": {
-    "street": "Av. Ejemplo",
-    "number": "123",
-    "commune": "Recoleta"
-  }
-}
-```
-
-Ejemplo respuesta:
-
-```json
-{
-  "id": "REQ-2026-000001",
-  "status": "INGRESADO",
-  "createdAt": "2026-09-05T13:30:00Z"
-}
-```
-
-Ejemplo cambio de estado:
-
-```http
-PATCH /api/v1/requests/REQ-2026-000001/status
-```
-
-```json
-{
-  "status": "ADMITIDO",
-  "reason": null
-}
-```
-
-## Comunicación síncrona
-
-Este servicio podrá consumir:
-
-### Catalog
+## Modelo principal
 
 ```text
-ms-barriodigital-catalog
+Request
+├── id
+├── trackingCode
+├── procedureTypeId
+├── citizenId
+├── description
+├── address
+├── status
+├── assignedCrewId
+├── createdAt
+└── updatedAt
 ```
 
-Para:
-
-- consultar tipos de trámite;
-- validar requisitos;
-- consultar disponibilidad/cupos.
-
-### Crews
+## Integraciones REST
 
 ```text
-ms-barriodigital-crews
+Requests ──► Catalog
+Requests ──► Crews
 ```
-
-Para:
-
-- asignar cuadrillas;
-- consultar visitas;
-- consultar disponibilidad operacional.
 
 ## RabbitMQ
 
-Requests actuará como productor de comandos asíncronos.
+Productor de tareas asíncronas.
 
-Ejemplos:
-
-```text
-email.send
-crew.ticket
-certificate.gen
-```
-
-Colas inicialmente consideradas:
+Colas:
 
 ```text
-q.cmd.email
+q.cmd.notification
 q.cmd.crew
-q.cmd.certificate
 ```
 
-Cada flujo deberá considerar su correspondiente DLQ.
+Flujo:
+
+```text
+Requests
+   ↓
+RabbitMQ
+   ↓
+Notify
+```
 
 ## Kafka
 
-Requests actuará como productor de eventos de dominio.
-
-Tópico principal:
+Tópico:
 
 ```text
 requests.events
 ```
 
-Eventos iniciales:
+Eventos:
 
 ```text
 REQUEST_CREATED
 REQUEST_ADMITTED
-REQUEST_IN_PROGRESS
-REQUEST_ON_SITE
 REQUEST_RESOLVED
 REQUEST_REJECTED
 ```
 
-## Envelope de eventos
+Consumidores:
 
-Los mensajes asíncronos deberán utilizar un formato común:
-
-```json
-{
-  "eventId": "uuid",
-  "type": "REQUEST_CREATED",
-  "timestamp": "2026-09-05T13:30:00Z",
-  "traceId": "trace-id",
-  "correlationId": "REQ-2026-000001",
-  "version": 1,
-  "payload": {}
-}
+```text
+Audit
+Report
 ```
-
-## Buenas prácticas de mensajería
-
-Se considera:
-
-- ACK / NACK explícito.
-- Idempotencia.
-- Dead Letter Queue.
-- Dead Letter Topic.
-- Reintentos controlados.
-- `eventId`.
-- `traceId`.
-- `correlationId`.
-- Versionamiento de eventos.
 
 ## Seguridad
 
-Los endpoints estarán protegidos mediante:
-
 - JWT.
 - Spring Security.
+- Amazon Cognito.
 - RBAC.
-
-Roles iniciales:
-
-```text
-ADMIN
-OPERATOR
-CITIZEN
-```
-
-La identidad del usuario debe obtenerse desde el JWT y no desde identificadores arbitrarios enviados por el frontend cuando corresponda.
-
-## Resiliencia
-
-Las llamadas hacia Catalog y Crews podrán utilizar:
-
-- Circuit Breaker.
-- Timeout.
-- Retry controlado.
-
-Implementación prevista:
-
-```text
-Resilience4j
-```
 
 ## Observabilidad
 
 - Spring Boot Actuator.
-- Health checks.
-- Logs estructurados.
+- Logs.
 - Métricas.
-- CloudWatch.
-- Trazabilidad mediante `traceId` y `correlationId`.
-- Métricas de errores de RabbitMQ/Kafka.
-
-## Variables de entorno
-
-```env
-SERVER_PORT=8081
-
-MYSQL_HOST=
-MYSQL_PORT=3306
-MYSQL_DATABASE=barriodigital_requests_db
-MYSQL_USER=
-MYSQL_PASSWORD=
-
-RABBITMQ_HOST=
-RABBITMQ_PORT=5672
-RABBITMQ_USER=
-RABBITMQ_PASSWORD=
-
-KAFKA_BOOTSTRAP_SERVERS=
-
-CATALOG_SERVICE_URL=
-CREWS_SERVICE_URL=
-
-EUREKA_SERVER_URL=
-COGNITO_ISSUER_URI=
-```
-
-## Contratos
-
-Los contratos oficiales se mantendrán en:
-
-```text
-barriodigital-contracts
-```
-
-Mediante:
-
-- OpenAPI para REST.
-- AsyncAPI para RabbitMQ y Kafka.
+- Amazon CloudWatch.
 
 ## Estructura esperada
 
@@ -334,21 +160,27 @@ src/
 │   │   └── cl/duoc/barriodigital/requests/
 │   │       ├── config/
 │   │       ├── controller/
-│   │       ├── domain/
 │   │       ├── dto/
 │   │       ├── entity/
-│   │       ├── exception/
-│   │       ├── mapper/
-│   │       ├── messaging/
 │   │       ├── repository/
+│   │       ├── service/
+│   │       ├── messaging/
 │   │       ├── security/
-│   │       └── service/
+│   │       └── exception/
 │   └── resources/
 │       └── application.yml
 └── test/
 ```
 
-## Ejecución local
+## Contratos
+
+```text
+barriodigital-contracts/openapi/requests.openapi.yaml
+barriodigital-contracts/asyncapi/rabbitmq.asyncapi.yaml
+barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
+```
+
+## Ejecución
 
 ```bash
 ./mvnw spring-boot:run
@@ -359,18 +191,6 @@ src/
 ```bash
 docker build -t barriodigital/requests:1.0.0 .
 ```
-
-## CI/CD
-
-GitHub Actions será utilizado para:
-
-1. Build.
-2. Unit tests.
-3. SonarQube.
-4. Snyk.
-5. Docker build.
-6. Push a Amazon ECR.
-7. Deploy.
 
 ## Estrategia Git
 
@@ -383,4 +203,4 @@ fix/*
 
 ## Estado
 
-🚧 Proyecto en etapa inicial de diseño y construcción.
+🚧 Proyecto en etapa inicial de diseño e implementación.
