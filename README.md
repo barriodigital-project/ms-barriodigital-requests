@@ -11,8 +11,7 @@ Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 - Gestionar estados.
 - Validar tipos y cupos mediante Catalog.
 - Coordinar asignaciones mediante Crews.
-- Publicar tareas en RabbitMQ.
-- Publicar eventos en Kafka.
+- La integración de mensajería se incorporará en una etapa posterior.
 
 ## Stack tecnológico
 
@@ -23,8 +22,6 @@ Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 - Hibernate
 - Maven
 - MySQL
-- RabbitMQ
-- Kafka
 - Spring Security
 - Eureka Client
 - Spring Boot Actuator
@@ -92,7 +89,7 @@ Requests ──► Catalog
 Requests ──► Crews
 ```
 
-## RabbitMQ
+## Integración futura con RabbitMQ
 
 Productor de tareas asíncronas.
 
@@ -113,7 +110,7 @@ RabbitMQ
 Notify
 ```
 
-## Kafka
+## Integración futura con Kafka
 
 Tópico:
 
@@ -157,25 +154,33 @@ Report
 src/
 ├── main/
 │   ├── java/
-│   │   └── cl/duoc/barriodigital/requests/
-│   │       ├── config/
+│   │   └── cl/brarriodigital/request/
 │   │       ├── controller/
 │   │       ├── dto/
-│   │       ├── entity/
+│   │       │   ├── request/
+│   │       │   └── response/
+│   │       ├── exception/
+│   │       ├── model/
 │   │       ├── repository/
 │   │       ├── service/
-│   │       ├── messaging/
-│   │       ├── security/
-│   │       └── exception/
+│   │       └── RequestMsApplication.java
 │   └── resources/
-│       └── application.yml
+│       └── application.properties
 └── test/
 ```
+
+## Alcance de la primera etapa
+
+Este primer incremento establece la estructura por capas. La implementación de
+los endpoints y reglas de negocio se realizará en incrementos posteriores.
+RabbitMQ y Kafka, incluidos productores y consumidores, quedan fuera de esta
+etapa. Las integraciones síncronas con Catalog y Crews se realizarán por REST
+cuando se implemente el flujo de trámites.
 
 ## Contratos
 
 ```text
-barriodigital-contracts/openapi/requests.openapi.yaml
+barriodigital-contracts/openapi/request.openapi.yaml
 barriodigital-contracts/asyncapi/rabbitmq.asyncapi.yaml
 barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
 ```
