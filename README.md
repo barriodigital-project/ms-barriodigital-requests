@@ -41,6 +41,8 @@ requests_db
 Por defecto se conecta a MySQL en `localhost:3306`. `DB_HOST`, `DB_PORT`,
 `DB_NAME`, `DB_USERNAME` y `DB_PASSWORD` permiten cambiar la conexión; el
 nombre por defecto de la base de datos es `requests_db`.
+Al ejecutar desde esta carpeta, Spring carga `DB_PASSWORD` desde el archivo
+compartido `../.env` del workspace. Ese archivo local no se versiona.
 
 Patrón:
 
