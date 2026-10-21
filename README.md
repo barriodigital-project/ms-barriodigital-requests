@@ -22,7 +22,6 @@ Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 - Hibernate
 - Maven
 - MySQL
-- Spring Security
 - Eureka Client
 - Spring Boot Actuator
 - Docker
@@ -36,8 +35,12 @@ Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 ## Base de datos
 
 ```text
-barriodigital_requests_db
+requests_db
 ```
+
+Por defecto se conecta a MySQL en `localhost:3306`. `DB_HOST`, `DB_PORT`,
+`DB_NAME`, `DB_USERNAME` y `DB_PASSWORD` permiten cambiar la conexión; el
+nombre por defecto de la base de datos es `requests_db`.
 
 Patrón:
 
@@ -85,8 +88,25 @@ Request
 ## Integraciones REST
 
 ```text
-Requests ──► Catalog
-Requests ──► Crews
+Requests ──► Catalog (validación de tipo y cupos)
+```
+
+Requests valida que el tipo de trámite exista y tenga disponibilidad antes de
+crear la solicitud. La creación no reserva ni descuenta cupos.
+
+La autenticación JWT y autorización por roles se realizan en el BFF. Para las
+rutas de creación y consultas propias, el BFF reenvía el `sub` del token
+validado mediante el encabezado interno `X-Citizen-Id`; no se debe exponer
+directamente este MS fuera de la red interna.
+
+Las transiciones de estado permitidas son:
+
+```text
+INGRESADO -> ADMITIDO | RECHAZADO
+ADMITIDO -> EN_GESTION | RECHAZADO
+EN_GESTION -> EN_TERRENO | RESUELTO | RECHAZADO
+EN_TERRENO -> EN_GESTION | RESUELTO
+RESUELTO y RECHAZADO son terminales
 ```
 
 ## Integración futura con RabbitMQ
@@ -136,10 +156,9 @@ Report
 
 ## Seguridad
 
-- JWT.
-- Spring Security.
-- Amazon Cognito.
-- RBAC.
+JWT authentication and role authorization are enforced in the BFF. This service
+is internal-only; Requests uses the trusted `X-Citizen-Id` header added by the
+BFF for citizen-owned operations.
 
 ## Observabilidad
 
@@ -169,13 +188,12 @@ src/
 └── test/
 ```
 
-## Alcance de la primera etapa
+## Alcance de esta etapa
 
-Este primer incremento establece la estructura por capas. La implementación de
-los endpoints y reglas de negocio se realizará en incrementos posteriores.
-RabbitMQ y Kafka, incluidos productores y consumidores, quedan fuera de esta
-etapa. Las integraciones síncronas con Catalog y Crews se realizarán por REST
-cuando se implemente el flujo de trámites.
+Se implementan modelo, repositorio, servicio, controlador, DTOs, validación,
+manejo de errores, persistencia MySQL y validación REST de disponibilidad con
+Catalog. RabbitMQ y Kafka, incluidos productores y consumidores, quedan fuera
+de esta etapa. La asignación con Crews se implementará en una etapa posterior.
 
 ## Contratos
 
@@ -188,7 +206,7 @@ barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
 ## Ejecución
 
 ```bash
-./mvnw spring-boot:run
+./mvnw.cmd spring-boot:run
 ```
 
 ## Docker
