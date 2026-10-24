@@ -69,7 +69,10 @@ GET   /api/v1/requests
 GET   /api/v1/requests/me
 GET   /api/v1/requests/{id}
 PATCH /api/v1/requests/{id}/status
+DELETE /api/v1/requests/{id}
 ```
+
+Eliminar un trámite responde HTTP 204.
 
 ## Modelo principal
 
@@ -110,6 +113,10 @@ EN_GESTION -> EN_TERRENO | RESUELTO | RECHAZADO
 EN_TERRENO -> EN_GESTION | RESUELTO
 RESUELTO y RECHAZADO son terminales
 ```
+
+Requests se registra en Eureka y lo utiliza para descubrir Catalog. Por defecto
+se conecta a `http://localhost:8761/eureka/`; la URL se puede sobrescribir
+mediante `EUREKA_SERVER_URL`.
 
 ## Integración futura con RabbitMQ
 
