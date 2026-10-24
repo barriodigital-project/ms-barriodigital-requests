@@ -82,6 +82,12 @@ public class RequestService {
         return toResponse(repository.save(serviceRequest));
     }
 
+    @Transactional
+    public void delete(UUID id) {
+        var serviceRequest = getRequest(id);
+        repository.delete(serviceRequest);
+    }
+
     private boolean isAllowedTransition(RequestStatus current, RequestStatus next) {
         return switch (current) {
             case INGRESADO -> INITIAL_STATUS_TRANSITIONS.contains(next);
