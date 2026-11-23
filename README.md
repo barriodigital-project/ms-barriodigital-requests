@@ -10,8 +10,7 @@ Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 - Consultar trámites del usuario autenticado.
 - Gestionar estados.
 - Validar tipos y cupos mediante Catalog.
-- Coordinar asignaciones mediante Crews.
-- La integración de mensajería se incorporará en una etapa posterior.
+- No coordina actualmente asignaciones con Crews ni publica eventos.
 
 ## Stack tecnológico
 
@@ -40,7 +39,8 @@ requests_db
 
 Por defecto se conecta a MySQL en `localhost:3306`. `DB_HOST`, `DB_PORT`,
 `DB_NAME`, `DB_USERNAME` y `DB_PASSWORD` permiten cambiar la conexión; el
-nombre por defecto de la base de datos es `requests_db`.
+nombre por defecto de la base de datos es `requests_db`. `DB_PASSWORD` es
+obligatoria y no tiene una contraseña fallback.
 Al ejecutar desde esta carpeta, Spring carga `DB_PASSWORD` desde el archivo
 compartido `../.env` del workspace. Ese archivo local no se versiona.
 
@@ -118,51 +118,6 @@ Requests se registra en Eureka y lo utiliza para descubrir Catalog. Por defecto
 se conecta a `http://localhost:8761/eureka/`; la URL se puede sobrescribir
 mediante `EUREKA_SERVER_URL`.
 
-## Integración futura con RabbitMQ
-
-Productor de tareas asíncronas.
-
-Colas:
-
-```text
-q.cmd.notification
-q.cmd.crew
-```
-
-Flujo:
-
-```text
-Requests
-   ↓
-RabbitMQ
-   ↓
-Notify
-```
-
-## Integración futura con Kafka
-
-Tópico:
-
-```text
-requests.events
-```
-
-Eventos:
-
-```text
-REQUEST_CREATED
-REQUEST_ADMITTED
-REQUEST_RESOLVED
-REQUEST_REJECTED
-```
-
-Consumidores:
-
-```text
-Audit
-Report
-```
-
 ## Seguridad
 
 JWT authentication and role authorization are enforced in the BFF. This service
@@ -201,15 +156,15 @@ src/
 
 Se implementan modelo, repositorio, servicio, controlador, DTOs, validación,
 manejo de errores, persistencia MySQL y validación REST de disponibilidad con
-Catalog. RabbitMQ y Kafka, incluidos productores y consumidores, quedan fuera
-de esta etapa. La asignación con Crews se implementará en una etapa posterior.
+Catalog. La publicación de eventos y la coordinación con Crews no forman parte
+de la implementación actual. Las notificaciones asíncronas con SQS/Lambda son
+una etapa cloud futura; no hay código de mensajería en Requests. El DELETE
+interno no se expone a través del BFF.
 
 ## Contratos
 
 ```text
 barriodigital-contracts/openapi/request.openapi.yaml
-barriodigital-contracts/asyncapi/rabbitmq.asyncapi.yaml
-barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
 ```
 
 ## Ejecución
@@ -217,6 +172,10 @@ barriodigital-contracts/asyncapi/kafka.asyncapi.yaml
 ```bash
 ./mvnw.cmd spring-boot:run
 ```
+
+Para levantar el sistema completo, usar
+[`compose-up.ps1`](../barriodigital-infra/scripts/compose-up.ps1) desde la raíz
+del workspace. `.\mvnw.cmd clean verify` ejecuta pruebas aisladas sobre H2.
 
 ## Docker
 
