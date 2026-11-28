@@ -13,9 +13,9 @@ import org.springframework.web.client.RestClient;
 @Configuration
 public class RestClientConfig {
 
-    @Bean
+    @Bean("directRestClientBuilder")
     @Primary
-    RestClient.Builder restClientBuilder(
+    RestClient.Builder directRestClientBuilder(
             @Value("${app.http.connect-timeout:2s}") Duration connectTimeout,
             @Value("${app.http.read-timeout:5s}") Duration readTimeout) {
         return builderWithTimeouts(connectTimeout, readTimeout);

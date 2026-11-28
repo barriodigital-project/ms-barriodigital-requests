@@ -2,6 +2,7 @@ package cl.brarriodigital.request.client;
 
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -18,7 +19,7 @@ public class CatalogClient {
     private final RestClient restClient;
 
     public CatalogClient(
-        RestClient.Builder builder,
+        @Qualifier("directRestClientBuilder") RestClient.Builder builder,
         @Value("${app.services.catalog.base-url}") String baseUrl
     ) {
         this.restClient = builder.clone().baseUrl(baseUrl).build();
