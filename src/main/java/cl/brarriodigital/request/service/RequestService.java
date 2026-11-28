@@ -34,6 +34,7 @@ public class RequestService {
 
     private final RequestRepository repository;
     private final CatalogClient catalogClient;
+    private final RequestEventOutboxService eventOutboxService;
 
     public List<RequestResponse> findAll(RequestStatus status, UUID procedureTypeId) {
         return repository.findAllByFilters(status, procedureTypeId).stream()
@@ -66,7 +67,9 @@ public class RequestService {
         serviceRequest.setDescription(request.description().trim());
         serviceRequest.setAddress(request.address().trim());
         serviceRequest.setStatus(RequestStatus.INGRESADO);
-        return toResponse(repository.save(serviceRequest));
+        var savedRequest = repository.save(serviceRequest);
+        eventOutboxService.enqueueCreated(savedRequest);
+        return toResponse(savedRequest);
     }
 
     @Transactional
@@ -79,7 +82,9 @@ public class RequestService {
         }
 
         serviceRequest.setStatus(request.status());
-        return toResponse(repository.save(serviceRequest));
+        var savedRequest = repository.save(serviceRequest);
+        eventOutboxService.enqueueStatusChanged(savedRequest);
+        return toResponse(savedRequest);
     }
 
     @Transactional

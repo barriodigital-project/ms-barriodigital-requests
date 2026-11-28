@@ -10,7 +10,7 @@ Microservicio encargado de la gestión de trámites de **BarrioDigital**.
 - Consultar trámites del usuario autenticado.
 - Gestionar estados.
 - Validar tipos y cupos mediante Catalog.
-- No coordina actualmente asignaciones con Crews ni publica eventos.
+- Publicar eventos de creación y cambio de estado después de persistirlos.
 
 ## Stack tecnológico
 
@@ -94,10 +94,17 @@ Request
 
 ```text
 Requests ──► Catalog (validación de tipo y cupos)
+Requests ──► Outbox transaccional ──► Amazon SQS
 ```
 
 Requests valida que el tipo de trámite exista y tenga disponibilidad antes de
-crear la solicitud. La creación no reserva ni descuenta cupos.
+crear la solicitud. La creación no reserva ni descuenta cupos. La creación y
+cada transición de estado generan un evento en la misma transacción de base de
+datos; un publicador reintenta enviar eventos pendientes a SQS.
+
+Los eventos usan el contrato
+[`request-events.asyncapi.yaml`](../barriodigital-contracts/asyncapi/request-events.asyncapi.yaml)
+y tienen entrega al menos una vez. Report deduplica usando `eventId`.
 
 La autenticación JWT y autorización por roles se realizan en el BFF. Para las
 rutas de creación y consultas propias, el BFF reenvía el `sub` del token
@@ -152,14 +159,14 @@ src/
 └── test/
 ```
 
-## Alcance de esta etapa
+## Eventos
 
-Se implementan modelo, repositorio, servicio, controlador, DTOs, validación,
-manejo de errores, persistencia MySQL y validación REST de disponibilidad con
-Catalog. La publicación de eventos y la coordinación con Crews no forman parte
-de la implementación actual. Las notificaciones asíncronas con SQS/Lambda son
-una etapa cloud futura; no hay código de mensajería en Requests. El DELETE
-interno no se expone a través del BFF.
+`SQS_EVENTS_ENABLED` habilita el publicador; `REQUEST_EVENTS_QUEUE_URL`,
+`AWS_REGION` y las credenciales temporales de AWS configuran la cola. En local
+la integración está deshabilitada por defecto y el servicio sigue funcionando
+sin conexión a AWS. La tabla outbox conserva los eventos pendientes y aplica
+reintentos con backoff. El DELETE interno no se expone a través del BFF y no
+genera eventos.
 
 ## Contratos
 

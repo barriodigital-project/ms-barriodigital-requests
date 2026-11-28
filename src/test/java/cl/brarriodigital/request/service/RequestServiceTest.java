@@ -35,6 +35,9 @@ class RequestServiceTest {
     @Mock
     private CatalogClient catalogClient;
 
+    @Mock
+    private RequestEventOutboxService eventOutboxService;
+
     @InjectMocks
     private RequestService service;
 
@@ -57,6 +60,7 @@ class RequestServiceTest {
         assertThat(response.address()).isEqualTo("Dirección");
         assertThat(response.status()).isEqualTo(RequestStatus.INGRESADO);
         verify(repository).save(any(Request.class));
+        verify(eventOutboxService).enqueueCreated(any(Request.class));
     }
 
     @Test
@@ -83,6 +87,7 @@ class RequestServiceTest {
         var response = service.updateStatus(id, new UpdateRequestStatusRequest(RequestStatus.ADMITIDO));
 
         assertThat(response.status()).isEqualTo(RequestStatus.ADMITIDO);
+        verify(eventOutboxService).enqueueStatusChanged(request);
     }
 
     @Test
