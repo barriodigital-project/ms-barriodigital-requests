@@ -2,7 +2,6 @@ package cl.brarriodigital.request.client;
 
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -19,7 +18,7 @@ public class CatalogClient {
     private final RestClient restClient;
 
     public CatalogClient(
-        @Qualifier("loadBalancedRestClientBuilder") RestClient.Builder builder,
+        RestClient.Builder builder,
         @Value("${app.services.catalog.base-url}") String baseUrl
     ) {
         this.restClient = builder.clone().baseUrl(baseUrl).build();
@@ -42,12 +41,6 @@ public class CatalogClient {
             throw new CatalogServiceUnavailableException("No fue posible validar el tipo de trámite", exception);
         } catch (ResourceAccessException exception) {
             throw new CatalogServiceUnavailableException("Servicio Catalog no disponible", exception);
-        } catch (IllegalStateException exception) {
-            if (exception.getMessage() != null
-                && exception.getMessage().startsWith("No instances available for ")) {
-                throw new CatalogServiceUnavailableException("Servicio Catalog no disponible", exception);
-            }
-            throw exception;
         }
     }
 }

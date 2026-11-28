@@ -3,7 +3,6 @@ package cl.brarriodigital.request.config;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -17,14 +16,6 @@ public class RestClientConfig {
     @Bean
     @Primary
     RestClient.Builder restClientBuilder(
-            @Value("${app.http.connect-timeout:2s}") Duration connectTimeout,
-            @Value("${app.http.read-timeout:5s}") Duration readTimeout) {
-        return builderWithTimeouts(connectTimeout, readTimeout);
-    }
-
-    @Bean
-    @LoadBalanced
-    RestClient.Builder loadBalancedRestClientBuilder(
             @Value("${app.http.connect-timeout:2s}") Duration connectTimeout,
             @Value("${app.http.read-timeout:5s}") Duration readTimeout) {
         return builderWithTimeouts(connectTimeout, readTimeout);
